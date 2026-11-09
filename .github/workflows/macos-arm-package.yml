@@ -1,0 +1,34 @@
+name: macOS ARM package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - name: Fancy Checkout
+        uses: sithlord48/fancy-checkout@v2
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          qt-version: 6.12
+      - name: Get version
+        uses: ./.github/actions/get-version
+      - name: Configure
+        run: cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DSKIP_BUILD_TESTS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=14 -DPACKAGE_VERSION_LABEL="${{ env.DESKFLOW_PACKAGE_VERSION }}"
+      - name: Build
+        run: cmake --build build --config Release -j3
+      - name: Test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: ctest --test-dir build/src/unittests --output-on-failure
+      - name: Package
+        run: cmake --build build --config Release -j3 --target package
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: package-deskflow-macos-arm64
+          path: build/deskflow[-_]*.*
+          if-no-files-found: error
