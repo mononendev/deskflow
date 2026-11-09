@@ -9,14 +9,17 @@ set(OSX_BUNDLE ${BUILD_OSX_BUNDLE})
 set(OS_STRING "macos-${BUILD_ARCHITECTURE}")
 
 if (OSX_BUNDLE)
-  set(_codesign_identity "-")
+  # Ad-hoc signatures carry no Team ID, so hardened runtime library validation
+  # rejects the bundled Qt frameworks at launch. Only enable hardened runtime
+  # when signing with a real identity.
+  set(_codesign_args "-codesign=-")
   if (APPLE_CODESIGN_DEV)
-    set(_codesign_identity "${APPLE_CODESIGN_DEV}")
+    set(_codesign_args "-hardened-runtime -timestamp \"-codesign=${APPLE_CODESIGN_DEV}\"")
   endif()
   install(CODE "execute_process(COMMAND
     ${DEPLOYQT}
     \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_PROPER_NAME}.app\"
-    -hardened-runtime -timestamp \"-codesign=${_codesign_identity}\"
+    ${_codesign_args}
   )")
   set(CPACK_PACKAGE_ICON "${MY_DIR}/dmg-volume.icns")
   set(CPACK_DMG_BACKGROUND_IMAGE "${MY_DIR}/dmg-background.tiff")
