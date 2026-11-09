@@ -9,26 +9,17 @@
 #include "base/Log.h"
 #include "platform/EiClipboard.h"
 
-#include <cstring>
 #include <poll.h>
 #include <unistd.h>
 
-#include <QBuffer>
 #include <QByteArrayList>
-#include <QDataStream>
 #include <QFile>
-#include <QImage>
 #include <QList>
 #include <QPair>
 #include <QSet>
 #include <QVarLengthArray>
-#include <QtEndian>
 
 namespace deskflow {
-
-static constexpr int kBmpSignatureSize = 2;
-static constexpr quint32 kBmpFileHeaderSize = 14;
-static constexpr quint32 kMinDibHeaderSize = 12;
 
 QByteArray PortalClipboard::formatMimeTypes(const char *const *mimeTypes)
 {
@@ -65,95 +56,6 @@ const PortalClipboard::SupportedMime *PortalClipboard::pickSupportedMime(const c
   }
 
   return nullptr;
-}
-
-QByteArray PortalClipboard::dibToBmp(const QByteArray &dib)
-{
-  if (dib.size() < static_cast<qint64>(sizeof(quint32)))
-    return {};
-
-  quint32 headerSize;
-  std::memcpy(&headerSize, dib.constData(), sizeof(headerSize));
-  headerSize = qFromLittleEndian(headerSize);
-  if (headerSize < kMinDibHeaderSize || headerSize > static_cast<quint32>(dib.size()))
-    return {};
-
-  const auto fileSize = static_cast<quint32>(kBmpFileHeaderSize + dib.size());
-  const quint32 pixelOffset = kBmpFileHeaderSize + headerSize;
-
-  QByteArray bmp;
-  QDataStream ds(&bmp, QIODevice::WriteOnly);
-  ds.setByteOrder(QDataStream::LittleEndian);
-  ds.writeRawData("BM", kBmpSignatureSize);
-  ds << fileSize;
-  ds << quint32(0);
-  ds << pixelOffset;
-  ds.writeRawData(dib.constData(), static_cast<int>(dib.size()));
-  return bmp;
-}
-
-QByteArray PortalClipboard::bmpToDib(const QByteArray &bmp)
-{
-  if (bmp.size() < kBmpFileHeaderSize)
-    return {};
-
-  return bmp.mid(kBmpFileHeaderSize);
-}
-
-QByteArray PortalClipboard::encodeFormat(IClipboard::Format format, const QByteArray &data)
-{
-  if (data.isEmpty())
-    return {};
-
-  if (format == IClipboard::Format::Bitmap) {
-    const auto bmpFile = dibToBmp(data);
-    if (bmpFile.isEmpty()) {
-      LOG_WARN("clipboard bitmap data is malformed");
-      return {};
-    }
-
-    QImage image;
-    if (!image.loadFromData(bmpFile, "BMP")) {
-      LOG_WARN("failed to decode clipboard bitmap");
-      return {};
-    }
-
-    QByteArray png;
-    QBuffer buf(&png);
-    buf.open(QIODevice::WriteOnly);
-    if (!image.save(&buf, "PNG")) {
-      LOG_WARN("failed to encode clipboard image as png");
-      return {};
-    }
-
-    return png;
-  }
-  return data;
-}
-
-QByteArray PortalClipboard::decodeFormat(IClipboard::Format format, const QByteArray &bytes)
-{
-  if (bytes.isEmpty())
-    return {};
-
-  if (format == IClipboard::Format::Bitmap) {
-    QImage image;
-    if (!image.loadFromData(bytes, "PNG")) {
-      LOG_WARN("failed to decode clipboard png");
-      return {};
-    }
-
-    QByteArray bmp;
-    QBuffer buf(&bmp);
-    buf.open(QIODevice::WriteOnly);
-    if (!image.save(&buf, "BMP")) {
-      LOG_WARN("failed to encode clipboard image as bmp");
-      return {};
-    }
-
-    return bmpToDib(bmp);
-  }
-  return bytes;
 }
 
 QByteArray PortalClipboard::readSelectionBytes(XdpSession *session, const char *mime, qint64 maxBytes)
@@ -228,8 +130,7 @@ void PortalClipboard::serveSelectionTransfer(EiClipboard *cache, XdpSession *ses
     raw = QByteArray::fromStdString(cache->get(requested->format));
   cache->close();
 
-  const auto data = encodeFormat(requested->format, raw);
-  if (data.isEmpty()) {
+  if (raw.isEmpty()) {
     LOG_DEBUG("clipboard has no data for mime: %s", mime);
     xdp_session_selection_write_done(session, serial, false);
     return;
@@ -250,8 +151,8 @@ void PortalClipboard::serveSelectionTransfer(EiClipboard *cache, XdpSession *ses
     return;
   }
 
-  const char *buf = data.constData();
-  qint64 total = data.size();
+  const char *buf = raw.constData();
+  qint64 total = raw.size();
   qint64 written = 0;
   while (written < total) {
     pollfd pfd{fd, POLLOUT, 0};
@@ -300,17 +201,16 @@ bool PortalClipboard::readSelectionIntoCache(
       continue;
     }
 
-    if (entry.format != IClipboard::Format::Bitmap) {
+    if (entry.format != IClipboard::Format::PNG) {
       while (bytes.endsWith('\0'))
         bytes.chop(1);
       bytes.replace("\r\n", "\n");
     }
 
-    auto data = decodeFormat(entry.format, bytes);
-    if (data.isEmpty())
+    if (bytes.isEmpty())
       continue;
 
-    reads.append({entry.format, std::move(data)});
+    reads.append({entry.format, std::move(bytes)});
     seen.insert(entry.format);
   }
 

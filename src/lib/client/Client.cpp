@@ -17,6 +17,7 @@
 #include "common/NetworkProtocol.h"
 #include "common/Settings.h"
 #include "deskflow/Clipboard.h"
+#include "deskflow/ClipboardImage.h"
 #include "deskflow/Computer.h"
 #include "deskflow/DeskflowException.h"
 #include "deskflow/IPlatformComputer.h"
@@ -391,6 +392,7 @@ void Client::sendClipboard(ClipboardID id)
 
   // check time
   if (m_timeClipboard[id] == 0 || clipboard.getTime() != m_timeClipboard[id]) {
+    ClipboardImage::prepareForSending(clipboard, m_maximumClipboardSize * 1024);
     // marshall the data
     std::string data = clipboard.marshall();
     if (data.size() >= m_maximumClipboardSize * 1024) {

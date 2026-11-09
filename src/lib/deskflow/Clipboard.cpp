@@ -60,6 +60,24 @@ void Clipboard::add(Format format, const std::string &data)
   m_added[formatID] = true;
 }
 
+void Clipboard::remove(Format format)
+{
+  std::scoped_lock lock{m_mutex};
+  if (!m_open) {
+    LOG_WARN("cannot remove from clipboard, not open");
+    return;
+  }
+
+  if (!m_owner) {
+    LOG_WARN("cannot remove from clipboard, no owner");
+    return;
+  }
+
+  const auto formatID = static_cast<int>(format);
+  m_data[formatID] = std::string();
+  m_added[formatID] = false;
+}
+
 bool Clipboard::open(Time time) const
 {
   std::scoped_lock lock{m_mutex};

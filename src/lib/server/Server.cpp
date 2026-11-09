@@ -11,6 +11,7 @@
 #include "base/IEventQueue.h"
 #include "base/Log.h"
 #include "deskflow/AppUtil.h"
+#include "deskflow/ClipboardImage.h"
 #include "deskflow/Computer.h"
 #include "deskflow/DeskflowException.h"
 #include "deskflow/IPlatformComputer.h"
@@ -1452,6 +1453,7 @@ void Server::onClipboardChanged(const BaseClientProxy *sender, ClipboardID id, u
 
   // get data
   sender->getClipboard(id, &clipboard.m_clipboard);
+  ClipboardImage::prepareForSending(clipboard.m_clipboard, m_maximumClipboardSize * 1024);
 
   std::string data = clipboard.m_clipboard.marshall();
   if (data.size() > m_maximumClipboardSize * 1024) {

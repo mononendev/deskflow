@@ -38,6 +38,8 @@ add_library(${lib_name} STATIC ${PLATFORM_CODE}
   Clipboard.h
   ClipboardChunk.cpp
   ClipboardChunk.h
+  ClipboardImage.cpp
+  ClipboardImage.h
   Computer.cpp
   Computer.h
   DeskflowException.cpp
@@ -94,6 +96,7 @@ target_link_libraries(${lib_name}
     common
     Qt6::Network
   PRIVATE
+    Qt6::Gui
     platform
 )
 

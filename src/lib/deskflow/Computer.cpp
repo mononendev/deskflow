@@ -8,6 +8,8 @@
 #include "deskflow/Computer.h"
 #include "base/IEventQueue.h"
 #include "base/Log.h"
+#include "deskflow/Clipboard.h"
+#include "deskflow/ClipboardImage.h"
 #include "deskflow/IPlatformComputer.h"
 
 #include <QProcess>
@@ -206,7 +208,14 @@ void Computer::warpCursor(int32_t x, int32_t y)
 
 void Computer::setClipboard(ClipboardID id, const IClipboard *clipboard)
 {
-  m_computer->setClipboard(id, clipboard);
+  if (clipboard == nullptr) {
+    m_computer->setClipboard(id, nullptr);
+    return;
+  }
+  Clipboard completeClipboard;
+  IClipboard::copy(&completeClipboard, clipboard);
+  ClipboardImage::addMissingImageFormats(completeClipboard);
+  m_computer->setClipboard(id, &completeClipboard);
 }
 
 void Computer::grabClipboard(ClipboardID id)

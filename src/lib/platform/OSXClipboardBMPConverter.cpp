@@ -8,36 +8,9 @@
 #include "platform/OSXClipboardBMPConverter.h"
 
 #include "base/Log.h"
+#include "deskflow/ClipboardImage.h"
 
 #include <QtEndian>
-
-quint32 OSXClipboardBMPConverter::dibPixelOffset(const quint8 *dib, qsizetype dibSize)
-{
-  quint32 pixelOffset = 0;
-  if (dibSize >= 16) {
-    const auto biSize = qFromLittleEndian<quint32>(dib);
-    if (biSize >= 12 && biSize <= dibSize) {
-      pixelOffset = biSize;
-      if (biSize >= kFallbackPixelOffset) {
-        const auto biBitCount = qFromLittleEndian<quint16>(dib + 14);
-        const auto biCompression = qFromLittleEndian<quint32>(dib + 16);
-        if (biSize == kFallbackPixelOffset) {
-          if (biCompression == kBiBitfields) {
-            pixelOffset += 12;
-          } else if (biCompression == kBiAlphabitfields) {
-            pixelOffset += 16;
-          }
-        }
-        if (biBitCount > 0 && biBitCount <= 8) {
-          const auto biClrUsed = qFromLittleEndian<quint32>(dib + 32);
-          const auto numColors = biClrUsed != 0 ? biClrUsed : (1u << biBitCount);
-          pixelOffset += numColors * 4;
-        }
-      }
-    }
-  }
-  return pixelOffset;
-}
 
 IClipboard::Format OSXClipboardBMPConverter::getFormat() const
 {
@@ -56,7 +29,7 @@ std::string OSXClipboardBMPConverter::fromIClipboard(const std::string &bmp) con
     return std::string();
   }
 
-  auto pixelOffset = dibPixelOffset(reinterpret_cast<const quint8 *>(bmp.data()), bmp.size());
+  auto pixelOffset = ClipboardImage::dibPixelOffset(reinterpret_cast<const uint8_t *>(bmp.data()), bmp.size());
   if (pixelOffset == 0) {
     pixelOffset = kFallbackPixelOffset;
   }
@@ -87,7 +60,7 @@ std::string OSXClipboardBMPConverter::toIClipboard(const std::string &bmp) const
   // so the full DIB (extended header, masks, palette) must reach the receiver. The
   // earlier code truncated to 40 bytes and dropped the BGRA bitfield masks.
   const auto offset = qFromLittleEndian<quint32>(raw + kBmpHeaderDIBPad);
-  const auto naturalOffset = dibPixelOffset(raw + kBmpFileHeaderSize, bmp.size() - kBmpFileHeaderSize);
+  const auto naturalOffset = ClipboardImage::dibPixelOffset(raw + kBmpFileHeaderSize, bmp.size() - kBmpFileHeaderSize);
   std::string result;
   const bool hasGap = naturalOffset != 0 && offset > kBmpFileHeaderSize + naturalOffset && offset <= bmp.size();
   if (hasGap) {

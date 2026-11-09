@@ -27,7 +27,7 @@ public:
 
   // Listed in preference order: richer formats first.
   static constexpr SupportedMime kSupportedMimes[] = {
-      {"image/png", IClipboard::Format::Bitmap},
+      {"image/png", IClipboard::Format::PNG},
       {"text/plain;charset=utf-8", IClipboard::Format::Text},
       {"text/plain", IClipboard::Format::Text},
   };
@@ -39,8 +39,6 @@ public:
   static QByteArray formatMimeTypes(const char *const *mimeTypes);
   static const SupportedMime *findSupportedMime(const char *mime);
   static const SupportedMime *pickSupportedMime(const char *const *available);
-  static QByteArray encodeFormat(IClipboard::Format format, const QByteArray &data);
-  static QByteArray decodeFormat(IClipboard::Format format, const QByteArray &bytes);
   static QByteArray readSelectionBytes(XdpSession *session, const char *mime, qint64 maxBytes);
 
   /// Advertise the cache's formats to the portal selection.
@@ -54,10 +52,6 @@ public:
   /// Returns true if any data was deposited.
   static bool
   readSelectionIntoCache(EiClipboard *cache, XdpSession *session, const char *const *mimeTypes, qint64 maxBytes);
-
-private:
-  static QByteArray dibToBmp(const QByteArray &dib);
-  static QByteArray bmpToDib(const QByteArray &bmp);
 };
 
 } // namespace deskflow

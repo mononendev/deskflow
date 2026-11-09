@@ -11,6 +11,8 @@
 #include "base/Log.h"
 #include "platform/OSXClipboardBMPConverter.h"
 #include "platform/OSXClipboardHTMLConverter.h"
+#include "platform/OSXClipboardPNGConverter.h"
+#include "platform/OSXClipboardTIFFConverter.h"
 #include "platform/OSXClipboardTextConverter.h"
 #include "platform/OSXClipboardUTF16Converter.h"
 #include "platform/OSXClipboardUTF8Converter.h"
@@ -22,6 +24,8 @@
 OSXClipboard::OSXClipboard() : m_time(0), m_pboard(nullptr)
 {
   m_converters.push_back(new OSXClipboardHTMLConverter);
+  m_converters.push_back(new OSXClipboardPNGConverter);
+  m_converters.push_back(new OSXClipboardTIFFConverter);
   m_converters.push_back(new OSXClipboardBMPConverter);
   m_converters.push_back(new OSXClipboardUTF8Converter);
   m_converters.push_back(new OSXClipboardUTF16Converter);

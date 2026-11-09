@@ -42,6 +42,8 @@ public:
   14 byte header (i.e. starting at the INFOHEADER) and with the image
   data immediately following the 40 byte INFOHEADER.
 
+  \c kPNG is a complete PNG file.
+
   \c kHTML is a text format encoded in UTF-8 and containing a valid
   HTML fragment (but not necessarily a complete HTML document).
   Newlines are LF.
@@ -51,6 +53,7 @@ public:
     Text,        //!< Text format, UTF-8, newline is LF
     HTML,        //!< HTML format, HTML fragment, UTF-8, newline is LF
     Bitmap,      //!< Bitmap format, BMP 24/32bpp, BI_RGB
+    PNG,         //!< PNG file bytes (complete PNG stream, signature included)
     TotalFormats //!< The number of clipboard formats supported
   };
 
